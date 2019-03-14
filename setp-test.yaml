@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Alamy StepFunctions CFT (lincyv@alamy.com).
+Resources:
+  MyStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: alamyUpload
+      DefinitionString: |-
+                {
+                "StartAt": "ValidateFilename",
+                "States": {
+                    "ValidateFilename": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:eu-west-1:250921337649:function:upload-ValidateFilename",     
+                      "Next": "IsProcessStop"
+                },
+                "IsProcessStop": {
+                    "Type" : "Choice",
+                    "Choices": [ 
+                      {
+                        "Variable": "$.stopProcess",
+                        "BooleanEquals": true,          
+                        "Next": "EndExecution"              
+                      },
+                      {
+                        "Variable": "$.stopProcess",
+                        "BooleanEquals": false,
+                        "Next": "SetFileParams"
+                      }
+                  ]
+                },
+              
+                "SetFileParams": {
+                    "Type": "Task",
+                  "Resource": "arn:aws:lambda:eu-west-1:250921337649:function:upload-SetFileParams",     
+                  "Next": "CreateImageRef"
+                },
+                "CreateImageRef": {
+                    "Type": "Task",
+                  "Resource": "arn:aws:lambda:eu-west-1:250921337649:function:upload-CreateImageRef",     
+                  "Next": "ProcessImage"
+                },
+                "ProcessImage": {
+                    "Type": "Task",
+                  "Resource": "arn:aws:lambda:eu-west-1:250921337649:function:upload-ProcessImage",     
+                  "Next": "IsErrorInProcess"
+                }, 
+                "IsErrorInProcess": {
+                    "Type" : "Choice",
+                    "Choices": [ 
+                      {
+                        "Variable": "$.stopProcess",
+                        "BooleanEquals": true,          
+                        "Next": "LogError"              
+                      },
+                      {
+                        "Variable": "$.stopProcess",
+                        "BooleanEquals": false,
+                        "Next": "GenerateMediadetails"
+                      }
+                  ]
+                },
+                "GenerateMediadetails": {
+                    "Type": "Task",
+                  "Resource": "arn:aws:lambda:eu-west-1:250921337649:function:upload-GenerateMediadetails",     
+                  "Next": "CreateImageDetails"
+                },  
+                  "CreateImageDetails": {
+                    "Type": "Task",
+                  "Resource": "arn:aws:lambda:eu-west-1:250921337649:function:upload-CreateImageDetails",     
+                  "Next": "IsErrorInCreateImage"
+                }, 
+                "IsErrorInCreateImage": {
+                    "Type" : "Choice",
+                    "Choices": [ 
+                      {
+                        "Variable": "$.stopProcess",
+                        "BooleanEquals": true,          
+                        "Next": "LogError"              
+                      },
+                      {
+                        "Variable": "$.stopProcess",
+                        "BooleanEquals": false,
+                        "Next": "RemoveOriginalFile"
+                      }
+                  ]
+                },
+                  "RemoveOriginalFile": {
+                    "Type": "Task",
+                  "Resource": "arn:aws:lambda:eu-west-1:250921337649:function:upload-RemoveOriginalFile",     
+                  "Next": "IsFailedImage"
+                },
+                "IsFailedImage": {
+                    "Type" : "Choice",
+                    "Choices": [ 
+                      {
+                        "Variable": "$.ImageEntity.Failed",
+                        "NumericEquals": 1,          
+                        "Next": "EndExecution"            
+                      },
+                      {
+                        "Variable": "$.ImageEntity.Failed",
+                        "NumericEquals": 0,
+                        "Next": "createAllThumbnails"
+                      }
+                  ]
+                },
+                "createAllThumbnails": {
+                    "Type": "Task",
+                  "Resource": "arn:aws:lambda:eu-west-1:250921337649:function:upload-createAllThumbnails",     
+                  "End": true
+                },  
+              
+              
+                "EndExecution": {
+                    "Type": "Succeed"
+                },
+                "LogError": {
+                    "Type": "Succeed"
+                }
+                }
+                  }
+      RoleArn: "arn:aws:iam::765119597117:role/stepexcrole"
+      Tags:
+        -
+          Key: "Name"
+          Value: "uploadtest"
+        -
+          Key: "Service"
+          Value: "upload"
