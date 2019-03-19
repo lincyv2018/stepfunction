@@ -120,7 +120,7 @@ Resources:
                 }
                 }
                   }
-      RoleArn: "arn:aws:iam::765119597117:role/stepexcrole"
+      RoleArn: "arn:aws:iam::250921337649:role/service-role/upload_step"
       Tags:
         -
           Key: "Name"
